@@ -1,0 +1,144 @@
+<!-- Dynamic MPC + Longitudinal MPC Integrated Control (OSQP by default) -->
+<launch>
+    <!-- Arguments -->
+    <arg name="control_rate" default="50.0" doc="Control rate in Hz"/>
+    <arg name="debug" default="false" doc="Enable debug mode"/>
+    
+    <!-- ============================================ -->
+    <!-- IMPORTANT: Motion Planning Pipeline 필수! -->
+    <!-- 이 런치 파일 실행 전에 반드시 실행:
+         roslaunch gps_global_planner motion_planning_pipeline.launch
+    ============================================ -->
+
+    <!-- ============================================ -->
+    <!-- Speed Profile Adapter DISABLED -->
+    <!-- MPC now directly subscribes to speed profiles -->
+    <!-- Prevents duplicate subscriptions and conflicts -->
+    <!-- ============================================ -->
+    <!-- 
+    <node name="speed_profile_adapter" 
+          pkg="mpc_longitudinal_controller" 
+          type="speed_profile_adapter.py" 
+          output="screen">
+        
+        <param name="default_speed_kmph" value="10.0"/>
+        <param name="speed_scale_factor" value="1.0"/>
+        <param name="use_lookahead" value="false"/>
+        <param name="lookahead_offset" value="2"/>
+        
+        <remap from="/pure_pursuit/control_info" to="/lateral_mpc/control_info"/>
+    </node>
+    -->
+    
+    <!-- ============================================ -->
+    <!-- Lateral MPC Controller (DYNAMIC MODEL) -->
+    <!-- ============================================ -->
+    <node name="lateral_mpc_controller" 
+          pkg="mpc_lateral_controller" 
+          type="lateral_mpc_controller_node.py" 
+          output="screen">
+          
+        <!-- Control Parameters -->
+        <param name="control_rate" value="$(arg control_rate)"/>
+        <param name="state_source" value="tf"/>
+        
+        <!-- IMPORTANT: Set model mode to dynamic -->
+        <param name="model_mode" value="dynamic"/>
+        
+        <!-- TF frames configuration -->
+        <param name="ref_frame_id" value="reference"/>
+        <param name="base_frame_id" value="base"/>
+        
+        <!-- Load parameters from YAML (mpc/Q is used for dynamic) -->
+        <rosparam file="$(find mpc_lateral_controller)/config/mpc_params.yaml" command="load"/>
+
+        <!-- Default solver backend: OSQP -->
+        <param name="mpc/solver_backend" value="osqp"/>
+        
+        <!-- OSQP solver settings for better convergence with dynamic model -->
+        <param name="mpc/osqp_max_iter" value="1000"/>
+        <param name="mpc/osqp_eps_abs" value="0.003"/>
+        <param name="mpc/osqp_eps_rel" value="0.003"/>
+        <param name="mpc/osqp_adaptive_rho" value="true"/>
+        <param name="mpc/osqp_rho" value="0.1"/>
+        
+        <!-- Dynamic model specific parameters for better stability -->
+        <param name="mpc/prediction_horizon" value="100"/>
+        <param name="mpc/control_horizon" value="12"/>
+        <param name="mpc/Q" value="[80.0, 15.0, 70.0, 10.0]"/>
+        <param name="mpc/R" value="2.5"/>
+        <param name="mpc/R_delta" value="40.0"/>
+        <param name="mpc/delta_rate_max" value="0.010"/>
+        <param name="mpc/P" value="[120.0, 30.0, 100.0, 20.0]"/>
+        
+        <!-- Predicted longitudinal velocity topic (for RViz predicted trajectory/speed pillars) -->
+        <param name="longitudinal_predicted_velocity_topic" value="/mpc_longitudinal/predicted_velocity"/>
+        
+        <!-- Global path topic (canonical) -->
+        <param name="global_path_topic" value="/planning/global/path"/>
+    </node>
+    
+    <!-- ============================================ -->
+    <!-- Longitudinal MPC Controller -->
+    <!-- ============================================ -->
+    <node name="mpc_longitudinal_controller" 
+          pkg="mpc_longitudinal_controller" 
+          type="mpc_node.py" 
+          output="screen" 
+          required="true">
+        
+        <!-- Enable integrated mode -->
+        <param name="integrated_mode" value="true"/>
+        
+        <!-- Configure lateral control input topic -->
+        <param name="lateral_control_topic" value="/lateral_mpc/control_info"/>
+        
+        <!-- Control parameters -->
+        <param name="control_rate" value="$(arg control_rate)"/>
+        
+        <!-- Topics -->
+        <param name="topic_ego" value="/Competition_topic"/>
+        
+        <!-- Direct speed profile integration (no adapter needed) -->
+        <param name="use_legacy_target" value="false"/>
+        <param name="lookahead_offset" value="0"/>
+        <param name="speed_scale_factor" value="1.0"/>
+        <param name="topic_cmd" value="/ctrl_cmd"/>
+        
+        <!-- Load MPC parameters from YAML (longitudinal) -->
+        <rosparam file="$(find mpc_longitudinal_controller)/config/mpc_params.yaml" command="load"/>
+
+        <!-- Publish predicted velocity sequence for visualization (m/s) -->
+        <param name="predicted_velocity_topic" value="/mpc_longitudinal/predicted_velocity"/>
+    </node>
+    
+    <!-- ============================================ -->
+    <!-- Optional: Visualization and Monitoring -->
+    <!-- ============================================ -->
+    <group if="$(arg debug)">
+        <!-- Path Visualizer -->
+        <node name="path_visualizer" 
+              pkg="mpc_lateral_controller" 
+              type="path_visualizer.py"
+              output="screen"/>
+        
+        <!-- Performance Monitor -->
+        <node name="performance_monitor" 
+              pkg="mpc_lateral_controller" 
+              type="performance_monitor.py"
+              output="log">
+            <param name="window_size" value="1000"/>
+            <param name="log_dir" value="/tmp/lateral_mpc_logs"/>
+        </node>
+    </group>
+    
+    <!-- ============================================ -->
+    <!-- Status Message (Using Python for proper Log format) -->
+    <!-- ============================================ -->
+    <node name="dynamic_integrated_startup_info" pkg="mpc_lateral_controller" type="startup_notifier.py"
+          output="screen">
+        <param name="message" value="Dynamic MPC Integrated Control Started (OSQP with relaxed settings)"/>
+        <param name="once" value="true"/>
+    </node>
+
+</launch>

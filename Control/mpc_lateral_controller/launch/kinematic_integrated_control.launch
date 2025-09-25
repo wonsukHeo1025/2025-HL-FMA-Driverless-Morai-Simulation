@@ -1,0 +1,127 @@
+<!-- Kinematic MPC + Longitudinal MPC Integrated Control -->
+<launch>
+    <!-- Arguments -->
+    <arg name="control_rate" default="50.0" doc="Control rate in Hz"/>
+    <arg name="debug" default="false" doc="Enable debug mode"/>
+    
+    <!-- ============================================ -->
+    <!-- IMPORTANT: Motion Planning Pipeline 필수! -->
+    <!-- 이 런치 파일 실행 전에 반드시 실행:
+         roslaunch gps_global_planner motion_planning_pipeline.launch
+    ============================================ -->
+    
+    <!-- ============================================ -->
+    <!-- Speed Profile Adapter DISABLED -->
+    <!-- MPC now directly subscribes to speed profiles -->
+    <!-- Prevents duplicate subscriptions and conflicts -->
+    <!-- ============================================ -->
+    <!-- 
+    <node name="speed_profile_adapter" 
+          pkg="mpc_longitudinal_controller" 
+          type="speed_profile_adapter.py" 
+          output="screen">
+        
+        <param name="default_speed_kmph" value="10.0"/>
+        <param name="speed_scale_factor" value="1.0"/>
+        <param name="lookahead_offset" value="2"/>
+        <param name="control_info_topic" value="/lateral_mpc/control_info"/>
+    </node>
+    -->
+    
+    <!-- ============================================ -->
+    <!-- Lateral MPC Controller (KINEMATIC MODEL) -->
+    <!-- ============================================ -->
+    <node name="lateral_mpc_controller" 
+          pkg="mpc_lateral_controller" 
+          type="lateral_mpc_controller_node.py" 
+          output="screen">
+          
+        <!-- Control Parameters -->
+        <param name="control_rate" value="$(arg control_rate)"/>
+        <param name="state_source" value="tf"/>
+        
+        <!-- IMPORTANT: Set model mode to kinematic -->
+        <param name="model_mode" value="kinematic"/>
+        
+        <!-- TF frames configuration -->
+        <param name="ref_frame_id" value="reference"/>
+        <param name="base_frame_id" value="base"/>
+        
+        <!-- Model parameters for kinematic -->
+        <param name="model/wheelbase" value="3.0"/>
+        
+        <!-- Load parameters from YAML only (single source of truth) -->
+        <rosparam file="$(find mpc_lateral_controller)/config/mpc_params.yaml" command="load"/>
+
+        <!-- Default solver backend: OSQP -->
+        <param name="mpc/solver_backend" value="osqp"/>
+
+        <!-- Predicted longitudinal velocity topic (for RViz predicted trajectory/speed pillars) -->
+        <param name="longitudinal_predicted_velocity_topic" value="/mpc_longitudinal/predicted_velocity"/>
+        
+        <!-- Topic selection via param -->
+        <param name="global_path_topic" value="/planning/global/path"/>
+    </node>
+    
+    <!-- ============================================ -->
+    <!-- Longitudinal MPC Controller -->
+    <!-- ============================================ -->
+    <node name="mpc_longitudinal_controller" 
+          pkg="mpc_longitudinal_controller" 
+          type="mpc_node.py" 
+          output="screen" 
+          required="true">
+        
+        <!-- Enable integrated mode -->
+        <param name="integrated_mode" value="true"/>
+        
+        <!-- Configure lateral control input topic -->
+        <param name="lateral_control_topic" value="/lateral_mpc/control_info"/>
+        
+        <!-- Control parameters -->
+        <param name="control_rate" value="$(arg control_rate)"/>
+        
+        <!-- Topics -->
+        <param name="topic_ego" value="/Competition_topic"/>
+        <param name="topic_cmd" value="/ctrl_cmd"/>
+        
+        <!-- Direct speed profile integration (no adapter needed) -->
+        <param name="use_legacy_target" value="false"/>
+        <param name="lookahead_offset" value="0"/>
+        <param name="speed_scale_factor" value="1.0"/>
+        
+        <!-- Load MPC parameters from YAML only (single source of truth) -->
+        <rosparam file="$(find mpc_longitudinal_controller)/config/mpc_params.yaml" command="load"/>
+
+        <!-- Publish predicted velocity sequence for visualization (m/s) -->
+        <param name="predicted_velocity_topic" value="/mpc_longitudinal/predicted_velocity"/>
+    </node>
+    
+    <!-- ============================================ -->
+    <!-- Optional: Visualization and Monitoring -->
+    <!-- ============================================ -->
+    <group if="$(arg debug)">
+        <!-- Path Visualizer -->
+        <node name="path_visualizer" 
+              pkg="mpc_lateral_controller" 
+              type="path_visualizer.py"
+              output="screen"/>
+        
+        <!-- Performance Monitor -->
+        <node name="performance_monitor" 
+              pkg="mpc_lateral_controller" 
+              type="performance_monitor.py"
+              output="log">
+            <param name="window_size" value="1000"/>
+            <param name="log_dir" value="/tmp/lateral_mpc_logs"/>
+        </node>
+    </group>
+    
+    <!-- ============================================ -->
+    <!-- Status Message -->
+    <!-- ============================================ -->
+    <node name="kinematic_integrated_startup_info" pkg="rostopic" type="rostopic"
+          args="pub -1 /rosout rosgraph_msgs/Log '{level: 1, msg: Kinematic MPC Integrated Control Started - Simple and Fast!}'"
+          output="screen"/>
+    
+</launch>

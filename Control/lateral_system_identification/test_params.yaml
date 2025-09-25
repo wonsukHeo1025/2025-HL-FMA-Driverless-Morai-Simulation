@@ -1,0 +1,86 @@
+identified_parameters:
+  Caf: 50006.872697515835
+  Caf_freq: 0
+  Car: 199389.33036237326
+  Car_freq: 0
+  Iz: 3684.651874227458
+  Iz_combined: 1842.325937113729
+  Iz_freq: 0
+  Kv: 0.009072827420777124
+metadata:
+  duration_seconds: 2654.7835285663605
+  scenario_counts:
+    sine_sweep: 17003
+    steady_state_cornering: 28053
+    step_steer: 14052
+  scenarios:
+  - steady_state_cornering
+  - step_steer
+  - sine_sweep
+  source_files:
+  - 20250811_152839_steady_state_cornering.csv
+  - 20250811_153447_steady_state_cornering.csv
+  - 20250811_154000_steady_state_cornering.csv
+  - 20250811_154909_steady_state_cornering.csv
+  - 20250811_155157_steady_state_cornering.csv
+  - 20250811_155411_step_steer.csv
+  - 20250811_155525_step_steer.csv
+  - 20250811_155759_step_steer.csv
+  - 20250811_155918_step_steer.csv
+  - 20250811_160301_step_steer.csv
+  - 20250811_160504_sine_sweep.csv
+  - 20250811_160659_sine_sweep.csv
+  - 20250811_160922_sine_sweep.csv
+  - 20250811_161120_sine_sweep.csv
+  speed_range: !!python/tuple
+  - !!python/object/apply:numpy.core.multiarray.scalar
+    - &id001 !!python/object/apply:numpy.dtype
+      args:
+      - f8
+      - false
+      - true
+      state: !!python/tuple
+      - 3
+      - <
+      - null
+      - null
+      - null
+      - -1
+      - -1
+      - 0
+    - !!binary |
+      AAAAoC5SBUA=
+  - !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      AAAAABU5LEA=
+  steering_range: !!python/tuple
+  - !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      AAAAAAAALsA=
+  - !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      AAAAAAAALkA=
+  time_range: !!python/tuple
+  - !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      5EHHaWMm2kE=
+  - !!python/object/apply:numpy.core.multiarray.scalar
+    - *id001
+    - !!binary |
+      OWd5AWYm2kE=
+  total_samples: 59108
+quality_metrics: {}
+timestamp: '2025-08-11T18:11:54.797101'
+validation_results:
+  rmse_lateral_accel: 0.0
+  rmse_yaw_rate: 0.0
+  test_samples: 11822
+vehicle_parameters:
+  L: 2.875
+  lf: 1.3
+  lr: 1.575
+  m: 1800.0

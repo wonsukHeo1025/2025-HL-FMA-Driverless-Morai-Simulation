@@ -1,0 +1,79 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Global Planner Node -->
+    <node pkg="global_planner" type="global_path_planner.py" name="global_path_planner" output="screen">
+        <!-- Path Configuration -->
+        <param name="path_file" value="$(find global_planner)/data/25hl_global_path_ver3.csv"/>
+        <param name="alt_path_file" value="$(find global_planner)/data/second_course.csv"/>
+        <param name="third_path_file" value="$(find global_planner)/data/third_course.csv"/>
+        <param name="path_topic" value="/planning/global/path"/>
+        <param name="waypoints_topic" value="/planning/global/path"/>
+        <param name="local_path_topic" value="/planning/local/path"/>
+        <param name="goal_topic" value="/planning/global/goal_pose"/>
+        <param name="speed_profile_topic" value="/planning/speed/desired_profile"/>
+
+        <!-- Processing Configuration -->
+        <param name="publish_rate" value="10.0"/>
+        <param name="lookahead_distance" value="50.0"/>
+        <param name="resample_spacing" value="0.2"/>
+        <param name="smoothing_window" value="11"/>
+        <param name="speed_smoothing" value="true"/>
+
+        <!-- Speed Configuration -->
+        <param name="max_speed" value="20.0"/>
+        <param name="min_speed" value="5.0"/>
+
+        <!-- Frame Configuration -->
+        <param name="map_frame" value="reference"/>
+        <param name="base_frame" value="base"/>
+        <param name="gps_frame" value="gps"/>
+        <param name="odometry_topic" value="/odometry"/>
+
+        <!-- Debug Configuration -->
+        <param name="publish_markers" value="true"/>
+        <param name="marker_topic" value="/planning/global/markers"/>
+        <param name="enable_logging" value="true"/>
+        <param name="publish_legacy_topics" value="true"/>
+
+        <!-- Sensor Integration (Optional) -->
+        <param name="use_gps" value="false"/>
+
+        <!-- Follow recommended path topic from occupancy evaluator -->
+        <param name="recommended_topic" value="/planning/global/recommended_path"/>
+        <param name="follow_recommended" value="true"/>
+    </node>
+
+    <!-- Path corridor visualization + occupancy evaluation -->
+    <node pkg="global_planner" type="path_occupancy_evaluator.py" name="path_occupancy_evaluator" output="screen">
+        <param name="path_default_topic" value="/planning/global/path_default"/>
+        <param name="path_second_topic"  value="/planning/global/path_second"/>
+        <param name="path_third_topic"   value="/planning/global/path_third"/>
+        <param name="marker_topic" value="/vis/planning/global/path_corridors"/>
+        <param name="corridor_half_width" value="1.2"/>
+        <param name="margin" value="0.25"/>
+        <param name="subsample_step" value="5"/>
+        <param name="line_width" value="0.08"/>
+        <param name="color_default" value="[0.7, 0.7, 0.7]"/>
+        <param name="color_second" value="[0.0, 0.4, 1.0]"/>
+        <param name="color_third" value="[0.0, 1.0, 0.0]"/>
+        <!-- Occupancy evaluation params -->
+        <param name="cluster_topic" value="/vis/perception/lidar/cluster_markers"/>
+        <param name="odometry_topic" value="/odometry"/>
+        <param name="occupancy_topic" value="/planning/global/path_occupancy"/>
+        <param name="scores_topic" value="/planning/global/path_scores"/>
+        <param name="recommended_topic" value="/planning/global/recommended_path"/>
+        <param name="target_frame" value="reference"/>
+        <param name="lookahead_m" value="30.0"/>
+        <param name="d_in" value="2.0"/>
+        <param name="d_out" value="2.4"/>
+        <param name="hold_sec" value="1.5"/>
+        <param name="pre_block_sec" value="0.5"/>
+        <param name="pre_clear_sec" value="0.5"/>
+        <param name="dmin_filter" value="median"/>
+        <param name="median_window" value="5"/>
+        <param name="ema_alpha" value="0.4"/>
+        <param name="priority" value="[default, second, third]"/>
+        <param name="auto_select" value="false"/>
+    </node>
+    
+</launch>

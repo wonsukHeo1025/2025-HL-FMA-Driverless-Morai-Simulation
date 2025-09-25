@@ -1,0 +1,44 @@
+<launch>
+
+  <!-- Parameters -->
+  <arg name="scenario" default="steady_state_cornering" 
+       doc="Scenario type: steady_state_cornering, step_steer, sine_sweep, double_lane_change"/>
+  <arg name="speed" default="40.0" doc="Target speed in km/h"/>
+  <arg name="control_mode" default="throttle" doc="Control mode: throttle, velocity, acceleration"/>
+  <arg name="rate" default="50.0" doc="Control loop rate in Hz"/>
+  <arg name="interactive" default="true" doc="Enable interactive CLI mode"/>
+  
+  <!-- Scenario-specific parameters -->
+  <arg name="steering_angles" default="[5, 10, 15, 20]" doc="Steering angles for steady-state (degrees)"/>
+  <arg name="hold_duration" default="10.0" doc="Duration to hold each angle (seconds)"/>
+  <arg name="freq_start" default="0.1" doc="Starting frequency for sine sweep (Hz)"/>
+  <arg name="freq_end" default="2.0" doc="Ending frequency for sine sweep (Hz)"/>
+  <arg name="sweep_duration" default="60.0" doc="Duration of sine sweep (seconds)"/>
+  
+  <!-- Data collection node -->
+  <node name="lateral_data_collection_node" pkg="data_collection" type="data_collection_node.py" output="screen">
+    <param name="control_rate" value="$(arg rate)"/>
+    <param name="control_mode" value="$(arg control_mode)"/>
+    <param name="interactive" value="$(arg interactive)"/>
+    
+    <!-- Pass scenario type -->
+    <param name="scenario" value="$(arg scenario)"/>
+    
+    <!-- Convert speed to m/s -->
+    <param name="target_speed" value="$(eval arg('speed') / 3.6)"/>
+    
+    <!-- Scenario-specific parameters -->
+    <rosparam subst_value="true">
+      scenario_params:
+        # Steady-state cornering
+        steering_angles_deg: $(arg steering_angles)
+        hold_duration: $(arg hold_duration)
+        
+        # Sine sweep
+        freq_start: $(arg freq_start)
+        freq_end: $(arg freq_end)
+        sweep_duration: $(arg sweep_duration)
+    </rosparam>
+  </node>
+  
+</launch>

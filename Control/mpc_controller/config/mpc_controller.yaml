@@ -1,0 +1,57 @@
+control_rate: 50.0
+publish_debug: true
+reference_frame: "reference"
+base_frame: "base"
+path_resolution_m: 0.5
+profile_upsample_factor: 10
+path_topic: "/planning/global/path"
+speed_profile_topic: "/planning/speed_profile/global"
+ego_topic: "/Competition_topic"
+imu_topic: "/imu"
+cmd_topic: "/ctrl_cmd"
+
+lateral_mpc:
+  sample_time: 0.02
+  prediction_horizon: 177
+  control_horizon: 1
+  wheelbase: 3.0
+  preview_distance: 5.0
+  q_weights: [200.0, 250.0]
+  p_weights: [2000.0, 2500.0]
+  r_weight: 1.0
+  r_delta_weight: 40.0
+  delta_min: -0.698
+  delta_max: 0.698
+  delta_rate_limit: 0.015
+  enable_band: true
+  dynamic_horizon:
+    enable: true
+    min_steps: 60
+    max_steps: 110
+    quantize_steps: 10
+    change_threshold: 15
+    cooldown_sec: 0.3
+    roi_steps: 35
+    kappa_agg: "rms"
+    kappa_low: 0.01
+    kappa_high: 0.1
+  vis:
+    speed_pillar_base_xy: 0.2
+    speed_pillar_height_per_mps: 0.5
+    steer_scale: 2.5
+
+longitudinal_mpc:
+  sample_time: 0.02
+  prediction_horizon: 77
+  control_horizon: 20
+  A: 0.9956
+  B: 0.0779
+  d: 0.0336
+  q_weight: 1.0
+  r_weight: 1.0
+  r_delta_weight: 0.25
+  u_min: -1.0
+  u_max: 1.0
+  delta_u_max: 0.10
+  v_min: 0.0
+  v_max: 13.75

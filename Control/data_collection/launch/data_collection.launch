@@ -1,0 +1,21 @@
+<launch>
+  <!-- TF 경고 억제 설정 -->
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find data_collection)/config/rosconsole.conf"/>
+
+  <!-- Parameters -->
+  <arg name="control_mode" default="throttle" doc="Control mode: throttle, velocity, acceleration"/>
+  <arg name="rate" default="50.0" doc="Control loop rate in Hz"/>
+  <arg name="interactive" default="true" doc="Enable interactive CLI mode"/>
+  
+  <!-- Data collection node -->
+  <node name="data_collection_node" pkg="data_collection" type="data_collection_node.py" output="screen">
+    <!-- TF2 경고 억제 -->
+    <rosparam>
+      tf2_buffer_length: 10.0
+    </rosparam>
+    <param name="control_rate" value="$(arg rate)"/>
+    <param name="control_mode" value="$(arg control_mode)"/>
+    <param name="interactive" value="$(arg interactive)"/>
+  </node>
+  
+</launch>

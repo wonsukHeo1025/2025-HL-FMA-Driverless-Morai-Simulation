@@ -1,0 +1,63 @@
+# MPC Longitudinal Controller Parameters
+
+# System Model Parameters (from Phase 1 identification)
+A: 0.9956          # System matrix
+B: 0.0779          # Input matrix  
+d: 0.0336          # Disturbance/offset
+
+# MPC Algorithm Parameters (matched with Lateral MPC)
+Np: 77             # Prediction horizon (77 steps = 1.54s at 50Hz) - MATCHED with lateral
+Nc: 77             # Control horizon = Np for FULL predictive control (scalar model is fast)
+
+# Cost Function Weights (adjusted for longer horizon)
+Q: 1.0             # State tracking weight (velocity error penalty)
+R: 0.3             # Control input weight (reduced for longer horizon)
+R_delta: 0.05      # Input change weight (reduced for smoother profile)
+
+# State Constraints
+v_min_kmph: -20.0  # Minimum velocity [km/h] (allows reverse)
+v_max_kmph: 38.5   # Maximum velocity [km/h]
+
+# Input Constraints
+u_min: -1.0        # Maximum brake command
+u_max: 1.0         # Maximum throttle command
+delta_u_max: 0.2   # Maximum input change per step (jerk limit)
+
+# Feasibility aids (soft state bounds)
+use_state_slack: true         # Allow tiny slack on velocity bounds to avoid solver failure
+slack_weight: 1000.0          # Penalty on slack usage (large)
+slack_max: 0.5                # Max allowed slack [m/s]
+
+# ROS Interface Parameters
+control_rate: 50.0                      # Control loop frequency [Hz]
+topic_ego: '/Competition_topic'         # Ego vehicle status topic
+topic_target: '/target_velocity'        # Target velocity topic  
+topic_cmd: '/ctrl_cmd'                  # Control command topic
+
+# Alternative Input Options
+use_twist_input: false                  # Use twist messages instead of ego status
+
+# Safety Parameters
+max_velocity_change: 2.0              # Maximum velocity change per second [m/s²]
+timeout_duration: 1.0                   # Timeout for velocity updates [s]
+
+# Direct Speed Profile Integration
+use_legacy_target: false                # Use /target_velocity topic (false = direct profile)
+lookahead_offset: 0                     # Points ahead for target extraction (0 = current)
+speed_scale_factor: 1.0                 # Scale factor for speed profile values
+
+# End-of-Path Deceleration Parameters
+end_zero_zone_points: 3                # Last K indices considered zero zone
+path_resolution_m: 0.5                  # Path point spacing [m]
+zero_zone_margin_m: 1.5                 # Margin before zero zone for k_zero calculation [m]
+mission_end_speed_threshold: 0.5        # Speed threshold for mission complete [m/s]
+disable_ctrl_on_mission_end: false      # Disable control at mission end
+brake_hold_value: 0.2                   # Brake value for holding at stop
+mission_end_hysteresis_points: 5        # Hysteresis for mission complete detection
+
+# Prediction-Based Deceleration
+use_prediction_based_decel: true        # Use prediction-distance matching approach
+delta_u_endgame_base: 0.12              # Reduced jerk limit near end
+enable_endgame_jerk_boost: true         # Enable dynamic jerk constraint adjustment
+endgame_window_points: 50               # Window for endgame jerk adjustment
+endgame_delta_u_scale: 0.5              # Scale factor for delta_u_max near end

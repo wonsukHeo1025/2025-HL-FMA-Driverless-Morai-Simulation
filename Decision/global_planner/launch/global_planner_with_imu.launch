@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<launch>
+    <!-- Global Planner with IMU Integration -->
+    <node pkg="global_planner" type="global_path_planner.py" name="global_path_planner" output="screen">
+        <!-- Path Configuration -->
+        <param name="path_file" value="$(find global_planner)/data/25hl_global_path_ver3.csv"/>
+        <param name="alt_path_file" value="$(find global_planner)/data/second_course.csv"/>
+        <param name="third_path_file" value="$(find global_planner)/data/third_course.csv"/>
+        <param name="path_topic" value="/planning/global/path"/>
+        <param name="waypoints_topic" value="/planning/global/path"/>
+
+        <!-- Processing Configuration -->
+        <param name="resample_spacing" value="0.2"/>
+        <param name="smoothing_window" value="11"/>
+
+        <!-- Frame Configuration -->
+        <param name="map_frame" value="reference"/>
+        <param name="base_frame" value="base"/>
+        <param name="gps_frame" value="gps"/>
+        <param name="odometry_topic" value="/odometry"/>
+
+        <!-- Debug/Preview Configuration -->
+        <param name="enable_logging" value="true"/>
+        <param name="publish_previews" value="true"/>
+
+        <!-- Sensor Integration (Enabled) -->
+        <param name="use_gps" value="false"/>
+
+        <!-- Feature: global planner publishes only global path/waypoints -->
+    
+        <!-- Follow recommended path topic from occupancy evaluator -->
+        <param name="recommended_topic" value="/planning/global/recommended_path"/>
+        <param name="follow_recommended" value="true"/>
+    </node>
+
+    <!-- Global Speed Profile (separate node) -->
+    <node pkg="global_planner" type="global_speed_profile.py" name="global_speed_profile" output="screen">
+        <param name="waypoints_topic" value="/planning/global/path"/>
+        <param name="speed_profile_topic" value="/planning/speed_profile/global"/>
+
+        <!-- Speed limits/smoothing -->
+        <param name="max_speed" value="6.00"/> <!-- m/s 단위 -->
+        <param name="min_speed" value="0.0"/>
+        <param name="speed_smoothing" value="true"/>
+        <param name="smoothing_window" value="5"/>
+
+        <!-- Physical constraints (mirrors C++ GlobalSpeedPlanner) -->
+        <param name="max_accel" value="1.0"/>
+        <param name="max_decel" value="3.0"/>
+        <param name="max_lat_accel" value="1.0"/>
+
+        <!-- Curvature handling -->
+        <param name="use_future_curvature" value="true"/>
+        <param name="lookahead_points" value="15"/>
+
+        <!-- Terminal behavior -->
+        <param name="stop_at_end" value="true"/>
+
+        <!-- Optional explicit speed limit zones: [[start_idx, end_idx, max_speed], ...]
+             NOTE: Use rosparam to ensure proper YAML typing (list of lists). -->
+        <!-- <rosparam param="speed_limit_zones">[[676, 1076, 4.0]]</rosparam> -->
+
+        <!-- Enable TL gating so it subscribes to /perception/traffic_light/state -->
+        <param name="stopline/enabled" value="true"/>
+        <!-- Treat yellow same as red (stop states) -->
+        <rosparam param="stopline/stop_states">[red, yellow]</rosparam>
+        <param name="publish_markers" value="true"/>
+        <param name="marker_step" value="7"/>
+    </node>
+
+    <!-- IMU Fusion block intentionally omitted; handled in Localization package. -->
+
+    <!-- Course switching trigger removed: single CSV path is used. -->
+
+    <!-- Path corridor visualization + occupancy scoring -->
+    <node pkg="global_planner" type="path_occupancy_evaluator.py" name="path_occupancy_evaluator" output="screen">
+        <!-- 필수 입력/출력/프레임 -->
+        <param name="path_default_topic" value="/planning/global/path_default"/>
+        <param name="path_second_topic"  value="/planning/global/path_second"/>
+        <param name="path_third_topic"   value="/planning/global/path_third"/>
+        <param name="target_frame" value="reference"/>
+        <param name="recommended_topic" value="/planning/global/recommended_path"/>
+
+        <!-- 장애물 소스: 포인트 기반 사용 -->
+        <param name="obstacle_source" value="points"/>
+        <param name="points_topic" value="/perception/lidar/processed_points"/>
+
+        <!-- 시각화 마커(복도 라인) -->
+        <param name="marker_topic" value="/vis/planning/global/path_corridors"/>
+
+        <!--
+          튜닝 핵심 파라미터 (링크 규칙 고정):
+          - corridor_half_width: 차선 중심선 기준 반폭(차량이 따라갈 경로의 반쪽 폭).
+          - margin: 안전여유. 복도 폭에 더해 실제 판정 경계를 넓힘.
+          - hysteresis_gap: 차단 해제 여유(d_out - d_in). 플리킹 방지용.
+          판정 경계는 자동 연동됩니다.
+            d_in  = corridor_half_width + margin
+            d_out = d_in + hysteresis_gap
+          RViz 복도 라인과 동일한 경계로 차단/해제가 결정되므로, 시각화와 판정이 1:1 일치합니다.
+          튜닝 가이드:
+          - 위협 판정을 키우려면: margin을 +0.05~0.10 늘림(경계 바깥까지 민감)
+          - 과민하면: margin을 줄이거나 corridor_half_width를 소폭 축소
+          - 플리킹 있으면: hysteresis_gap을 0.10→0.15~0.20으로 증가
+        -->
+        <param name="corridor_half_width" value="1.1"/>
+        <param name="margin" value="0.3"/>
+        <param name="hysteresis_gap" value="0.10"/>
+
+        <!-- 평가 범위(전방 거리) -->
+        <param name="lookahead_m" value="30.0"/>
+
+        <!-- 민감도/부하 조절 파라미터 -->
+        <!--
+          - min_points_inside: 복도 내부로 판정되는 XY 포인트 최소 개수.
+            (경로 중심선까지의 횡거리 d <= corridor_half_width+margin 이고,
+             s가 현재 위치 기준 lookahead 범위에 드는 포인트를 카운트)
+            너무 민감하면 값을 높여 스파이크(한두 점)에 의한 차단을 억제.
+          - points_stride: 포인트 서브샘플 간격(N개 중 1개만 사용). 부하/노이즈 절충.
+          - points_max: 프레임당 최대 처리 포인트 수 상한. 안전장치.
+        -->
+        <param name="min_points_inside" value="4"/>
+        <param name="points_stride" value="1"/>
+        <param name="points_max" value="8000"/>
+    </node>
+</launch>

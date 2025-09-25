@@ -1,0 +1,135 @@
+# MPC Controller Parameters Configuration - S-Curve 완주 및 타이트 코너링 튜닝안
+
+# Control Settings
+control:
+  rate: 50.0
+  state_source: "tf"
+
+# Model Parameters
+model:
+  mode: "kinematic"
+  wheelbase: 3.0
+
+# MPC Optimization Parameters
+mpc:
+  # ====================================================================
+  # === 추천 튜닝 파라미터 (S-Curve 완주 및 타이트 코너링) ================
+  # ====================================================================
+
+  # Horizons: Np를 줄여 '근시안적'으로 만들고, Nc는 반응성을 위해 유지
+  prediction_horizon: 177     # (스텝) 초기값. 동적 Np 활성화 시 런타임에서 덮어씀
+  control_horizon: 1          # (스텝) Nc=1 고정 (필수)
+
+  # 동적 Np 설정 (경로 곡률 기반)
+  horizon_dynamic_enable: true         # on/off
+  horizon_min_steps: 60                # 최소 Np [step]
+  horizon_max_steps: 110               # 최대 Np [step]
+  horizon_quantize_steps: 10           # Np 양자화 간격 [step]
+  horizon_change_threshold_steps: 15   # 재빌드 임계 변화량 [step]
+  horizon_cooldown_sec: 0.3            # 재빌드 최소 간격 [s]
+  # ROI 설정: 곡률 집계에 사용할 구간 (steps-only)
+  horizon_roi_steps: 35                # 현재 인덱스부터 윈도우 크기 [steps]
+  # 곡률→Np 매핑 파라미터
+  horizon_kappa_agg: "rms"         # "max_abs" 또는 "rms"
+  horizon_kappa_low: 0.01             # 직선에 가까운 곡률 임계 [1/m]
+  horizon_kappa_high: 0.1             # 타이트 코너 곡률 임계 [1/m]
+
+  # Cost function weights for kinematic model:
+  # Q와 P 가중치를 극단적으로 높여 경로 이탈을 절대 용납하지 않도록 설정
+  Q_kinematic: [200.0, 250.0]   # (기존 [110, 150]) 현재 오차 비용 대폭 상향
+  P_kinematic: [2000.0, 2500.0] # (기존 [1100, 1500]) 짧아진 예측 지평 끝에서의 안정성을 매우 강력하게 강제
+
+  # Common weights for both models:
+  # (오실레이션 강제 억제를 위한 과도 세팅)
+  R: 1.0                      # (무차원) 입력 비용, 크면 절약적 조향
+  R_delta: 40.0               # (무차원) 입력변화 비용, 크면 고주파 억제
+
+  # Constraints:
+  delta_limits: [-0.698, 0.698] # (rad) 조향 한계
+  delta_rate_max: 0.015         # (rad/step) 조향 변화율 상한(50Hz 기준)
+
+  # Preview
+  preview_distance: 5.0         # (m) 프리뷰 거리
+
+  # ====================================================================
+  # === OSQP 솔버 설정 (기존과 동일) ===================================
+  # ====================================================================
+  solver_backend: "osqp"
+  osqp_max_iter: 1000
+  osqp_eps_abs: 2.0e-3
+  osqp_eps_rel: 2.0e-3
+  osqp_polish: false
+  osqp_time_limit: -1.0
+
+  # ================================================================
+  # 비선형 가중/제약 (효과 확인용 과도 세팅: 직선 오실레이션 강제 억제)
+  # ================================================================
+  # 시간가변 Q/P (앞은 낮게, 말기는 높게) - 오실레이션 억제를 위해 활성화
+  time_varying_weights_enable: true    # Px 상태 블록만 갱신
+  q_scale_front: 0.6           # (무차원) 예측 초반 완화
+  q_scale_back: 1.5            # (무차원) 예측 말기 강화
+  p_scale_end: 1.8             # (무차원) 터미널 P 강화
+
+  # 밴드 소프트 제약 (두께 있는 경로)
+  band_enable: true            # (bool) 밴드 소프트 제약 활성화
+  band_base_width: 0.5        # (m) 허용 밴드 반폭 w
+  band_width_min: 0.4         # (m) 최소 밴드 반폭
+  band_width_max: 0.6         # (m) 최대 밴드 반폭
+  band_width_speed_gain: 0.0   # (m per m/s) 속도에 따른 w 증가량
+  band_width_curvature_gain: 0.0 # (m per 1/m) |κ|에 따른 w 감소량
+  band_lambda: 3000.0          # (무차원) 밴드 외부 L1 슬랙 벌점 가중
+
+  # IRLS 로버스트 가중 (허버 유사, 1회 반복)
+  irls_enable: true            # (bool) IRLS(허버 유사) 1회 반복
+  irls_max_iters: 1            # (회)
+  irls_kappa: 0.10             # (m) 허버 전환 임계(작을수록 가중 급증)
+  irls_epsilon: 0.001          # (m) 수치 안정용 바이어스
+
+  # ================================================================
+  # Band-aware Q-weighting (밴드 의존 Q 스케줄링 - 연속 블렌딩 + 히스테리시스)
+  # ================================================================
+  # 상태 의존 Q 스케줄링: 밴드 내부와 외부에서 다른 Q 가중치 사용
+  band_aware_q_weighting: true          # 밴드 기준으로 Q를 스위칭
+  Q_kinematic_inside_band: [8.0, 800.0]   # [Q_y, Q_psi] Nc=3 기준 완화
+  Q_kinematic_outside_band: [250.0, 400.0] # 밴드 외부: 빠른 복귀
+  
+  # 연속 블렌딩 및 히스테리시스 설정
+  band_blend_hysteresis: true
+  band_hyst_ratio_inner: 0.92  # w_in = 0.92 * band_base_width (히스테리시스 확대)
+  band_hyst_ratio_outer: 1.12  # w_out = 1.12 * band_base_width (히스테리시스 확대)
+  
+  # ================================================================
+  # Input Cost Centering (입력 비용 feedforward 중심화)
+  # ================================================================
+  input_cost_centering: true   # R·(u - δ_ff)^2 방식 사용
+  understeer_compensation: false  # Kv·v^2·κ 보상 (선택적)
+  kappa_smoothing_alpha: 0.9   # κ 지수평활 강화 – δ_ff 안정화
+  
+  # ================================================================
+  # State-dependent Smoothing (상태 의존 제약/매끄러움 스케줄링)
+  # ================================================================
+  state_dep_smoothing_enable: true
+  inside_delta_rate_max: 0.030  # 밴드 내부: 빠른 반응 (Nc=3 보완)
+  inside_R_delta: 15.0          # 밴드 내부: 낮은 매끄러움
+  outside_delta_rate_max: 0.020 # 밴드 외부: 더 빠른 반응 허용 (커브 대비)
+  outside_R_delta: 25.0         # 밴드 외부: 중간 매끄러움
+
+  # ================================================================
+  # Second-difference penalty (Δ²u) to damp ringing
+  # ================================================================
+  input_second_diff_enable: true
+  input_second_diff_weight: 10.0  # R_ddelta2 (Preset A)
+
+  # ================================================================
+  # Terminal input anchoring (직선 유지력): ρ·(u_Nc-1 − δ_ff_tail)^2
+  # ================================================================
+  terminal_input_anchor_enable: true
+  terminal_input_anchor_rho: 40.0
+  terminal_input_anchor_kappa_threshold: 1.0e-4  # 직선 판단 임계값
+
+# Low-speed steering hold settings
+low_speed:
+  freeze_enable: true           # Enable steering freeze at low speeds
+  freeze_below_kmph: 1.0        # Enter hold when speed ≤ this value [km/h]
+  release_above_kmph: 2.0       # Exit hold when speed ≥ this value [km/h]
+  publish_rate_hz: 10.0         # Publish rate during hold mode [Hz]

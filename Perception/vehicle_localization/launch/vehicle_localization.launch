@@ -1,0 +1,48 @@
+<?xml version="1.0"?>
+<launch>
+  <node pkg="vehicle_localization" type="vehicle_odometry_node.py" name="vehicle_odometry" output="screen">
+    <param name="reference_frame" value="reference"/>
+    <param name="base_frame" value="base"/>
+    <param name="odometry_topic" value="/odometry"/>
+    <param name="gps_topic" value="/gps"/>
+    <param name="imu_topic" value="/imu/processed"/>
+  </node>
+
+  <!-- Static sensor TFs from base (FLU offsets) -->
+  <node pkg="vehicle_localization" type="static_sensor_tf_publisher.py" name="static_sensor_tf" output="screen">
+    <param name="base_frame" value="base"/>
+    <param name="gps_frame" value="GPS"/>
+    <param name="lidar_frame" value="velodyne"/>
+    <param name="imu_frame" value="IMU"/>
+    <param name="camera_frame" value="Camera"/>
+    <rosparam param="gps_xyz">[0.0, 0.0, 1.2]</rosparam>
+    <rosparam param="lidar_xyz">[1.6, 0.0, 1.22]</rosparam>
+    <rosparam param="imu_xyz">[0.0, 0.0, 1.18]</rosparam>
+    <rosparam param="camera_xyz">[3.5, 0.0, 0.6]</rosparam>
+    <!-- Optional orientation adjustments (radians), default [0,0,0] -->
+    <!-- <param name="camera_rpy" value="[-1.5708, 0.0, -1.5708]"/> -->
+  </node>
+
+  <!-- IMU-only Dead Reckoning (optional; comment out if not needed) -->
+  <node pkg="vehicle_localization" type="imu_dead_reckoning_node.py" name="imu_dead_reckoning" output="screen">
+    <param name="reference_frame" value="reference"/>
+    <param name="base_frame" value="base"/>
+    <param name="base_dr_frame" value="base_dr"/>
+    <param name="broadcast_tf" value="true"/>
+    <param name="out_topic" value="/odometry/imu_only"/>
+    <param name="imu_topic" value="/imu/processed"/>
+  </node>
+
+  <!-- IMU Processor (bias/noise compensation) - set biases from calibration output -->
+  <!-- Example: rosparam set /imu_processor/acc_bias "[0.01, -0.02, -0.10]" -->
+  <node pkg="vehicle_localization" type="imu_processor_node.py" name="imu_processor" output="screen">
+    <param name="imu_in_topic" value="/imu"/>
+    <param name="imu_out_topic" value="/imu/processed"/>
+    <param name="calib_file" value="$(find vehicle_localization)/data/imu_calibration.yaml"/>
+    <param name="use_lpf" value="true"/>
+    <param name="lpf_type" value="butter"/>
+    <param name="sample_rate_hz" value="50.0"/>
+    <param name="cutoff_hz" value="3.0"/>
+    <param name="ema_alpha" value="0.1"/>
+  </node>
+</launch>

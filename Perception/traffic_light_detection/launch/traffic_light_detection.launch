@@ -1,0 +1,45 @@
+<launch>
+  <!-- Detector args for runtime tuning -->
+  <arg name="image_topic" default="/image_jpeg/compressed" />
+  <arg name="state_topic" default="/perception/traffic_light/state" />
+  <arg name="device" default="cuda:0" />         <!-- e.g., cpu | cuda:0 -->
+  <arg name="imgsz" default="640" />
+  <arg name="half" default="false" />
+  <arg name="conf" default="0.1" />
+  <arg name="iou" default="0.7" />
+  <!-- ROI 관련 인자 제거됨 -->
+  <arg name="enable_viz" default="false" />
+  <arg name="log_throttle" default="1.0" />
+  <arg name="publish_debug_image" default="true" />
+  <arg name="debug_image_topic" default="/perception/traffic_light/annotated/compressed" />
+
+  <!-- Traffic Light Detector Node -->
+  <node pkg="traffic_light_detection"
+        type="traffic_light_detector.py"
+        name="traffic_light_detector"
+        output="screen">
+    <param name="image_topic" value="$(arg image_topic)" />
+    <param name="state_topic" value="$(arg state_topic)" />
+    <param name="device" value="$(arg device)" />
+    <param name="imgsz" value="$(arg imgsz)" />
+    <param name="half" value="$(arg half)" />
+    <param name="conf" value="$(arg conf)" />
+    <param name="iou" value="$(arg iou)" />
+    <!-- ROI 파라미터 제거됨: 전체 프레임 추론 고정 -->
+    <param name="enable_viz" value="$(arg enable_viz)" />
+    <param name="log_throttle" value="$(arg log_throttle)" />
+    <param name="publish_debug_image" value="$(arg publish_debug_image)" />
+    <param name="debug_image_topic" value="$(arg debug_image_topic)" />
+  </node>
+
+  <!-- Stop Line Detector Node -->
+  <node pkg="traffic_light_detection"
+        type="stop_line_detector.py"
+        name="stop_line_detector"
+        output="screen">
+    <param name="odometry_topic" value="/odometry" />
+    <param name="path_topic" value="/planning/global/path" />
+    <param name="flag_topic" value="/perception/traffic_light/stop_line/flag" />
+    <param name="distance_topic" value="/perception/traffic_light/stop_line/distance" />
+  </node>
+</launch>

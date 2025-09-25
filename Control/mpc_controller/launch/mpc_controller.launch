@@ -1,0 +1,7 @@
+<launch>
+  <arg name="config" default="$(find mpc_controller)/config/mpc_controller.yaml" />
+
+  <rosparam command="load" file="$(arg config)" ns="mpc_controller" />
+
+  <node pkg="mpc_controller" type="mpc_controller_node" name="mpc_controller" output="screen" />
+</launch>

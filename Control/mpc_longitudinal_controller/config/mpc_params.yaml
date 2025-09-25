@@ -1,0 +1,80 @@
+# Simplified MPC Longitudinal Controller Parameters
+
+# System Model Parameters (from Phase 1 identification)
+A: 0.9956          # System matrix
+B: 0.0779          # Input matrix  
+d: 0.0336          # Disturbance/offset
+
+# MPC Algorithm Parameters (matched with Lateral MPC)
+Np: 77             # Prediction horizon (77 steps = 1.54s at 50Hz) - MATCHED with lateral
+Nc: 20             # Control horizon (reduced to mitigate low-speed oscillation)
+
+# Cost Function Weights
+Q: 1.0             # State tracking weight (velocity error penalty)
+R: 1.0             # Control input weight (increased for smoother control)
+R_delta: 0.25      # Input change weight (increased to suppress jerk)
+
+# OSQP Solver Parameters (speed-first defaults)
+max_iter: 1200     # Reduce from 8000 to keep latency bounded
+eps_abs: 0.002     # Absolute tolerance
+eps_rel: 0.002     # Relative tolerance
+time_limit: 0.02   # Seconds; set <=0 to disable
+
+# State Constraints
+v_min_kmph: 0.0    # Minimum velocity [km/h]
+v_max_kmph: 49.5   # Maximum velocity [km/h]
+
+# Input Constraints
+u_min: -1.0        # Maximum brake command
+u_max: 1.0         # Maximum throttle command
+delta_u_max: 0.10  # Maximum input change per step (stricter jerk limit)
+
+# Feasibility aids (soft state bounds)
+use_state_slack: true
+slack_weight: 1000.0
+slack_max: 0.5     # [m/s] per-step bound relaxation cap
+
+# Low-speed Scheduling (≤ ~6 km/h)
+low_speed_enabled: false                 # Enable low-speed specific tuning
+low_speed_threshold_kmph: 6.0           # Enter low-speed mode below this speed
+low_speed_hysteresis_kmph: 1.0          # Exit at threshold + hysteresis (≈7 km/h)
+low_speed_Nc: 15                        # Reduced control horizon for damping
+low_speed_Q: 0.8                        # Slightly weaker tracking at very low speeds
+low_speed_R: 0.5                        # Stronger input smoothing
+low_speed_R_delta: 0.4                  # Even stronger jerk suppression at low speeds
+low_speed_u_max: 0.1                    # Limit peak throttle at crawl speeds
+low_speed_delta_u_max: 0.2             # Stricter jerk limit at low speeds
+
+# ROS Interface Parameters
+control_rate: 50.0                      # Control loop frequency [Hz]
+topic_ego: '/Competition_topic'         # Ego vehicle status topic
+topic_cmd: '/ctrl_cmd'                  # Control command topic
+
+# Path Parameters
+path_resolution_m: 0.5                  # Path point spacing [m]
+
+# Integration Mode
+integrated_mode: true                   # Integrate steering from lateral MPC
+lateral_control_topic: '/lateral_mpc/control_info'  # Lateral control info topic
+steering_timeout: 0.5                   # Steering timeout [s]
+
+# Safety Parameters
+timeout_duration: 1.0                   # Timeout for velocity updates [s]
+
+# Zero-throttle window (indices are in 0.5 m resolution)
+zero_throttle_window_enabled: true
+zero_throttle_start_idx_05m: 1190
+zero_throttle_end_idx_05m: 1203
+zero_throttle_speed_kmph: 13.0
+
+# Stop-brake window (maintain minimum brake when very slow)
+stop_window_enabled: true
+stop_window_start_idx_05m: 1195
+stop_window_end_idx_05m: 1203
+stop_brake_speed_kmph: 1.0
+stop_brake_value: 0.1
+
+# Dynamic stop hold near stopline (distance-based brake hold)
+dynamic_stop_hold_enabled: true           # Enable/disable automatic brake hold near stopline
+dynamic_stop_hold_distance_m: 5.0         # Hold brake when distance to next stopline <= this [m]
+dynamic_stop_hold_min_brake: 0.1          # Minimum brake command to enforce during hold [0..1]

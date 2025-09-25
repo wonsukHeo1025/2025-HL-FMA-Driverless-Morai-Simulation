@@ -1,0 +1,22 @@
+# Requirements for Lateral System Identification Tool
+
+# Core dependencies
+numpy>=1.19.0
+pandas>=1.2.0
+scipy>=1.6.0
+
+# Plotting
+matplotlib>=3.3.0
+
+# Data export
+pyyaml>=5.4.0
+
+# CLI
+click>=7.1.0
+
+# Progress bars
+tqdm>=4.60.0
+
+# Optional for advanced features
+scikit-learn>=0.24.0  # For additional validation metrics
+seaborn>=0.11.0       # For enhanced plotting
