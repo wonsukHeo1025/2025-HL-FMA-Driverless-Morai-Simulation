@@ -53,16 +53,16 @@ flowchart LR
     B --> G[path_occupancy_evaluator]
     D --> H[global_speed_profile]
     F --> G
-    G --> I[/planning/global/recommended_path]
+    G --> I["/planning/global/recommended_path"]
     I --> F
-    F --> J[/planning/global/path]
-    F --> K[/planning/global/path_default second third]
-    B --> L[/perception/collision/flag]
-    D --> M[/perception/traffic_light/state]
+    F --> J["/planning/global/path"]
+    F --> K["/planning/global/path_default, /planning/global/path_second, /planning/global/path_third"]
+    B --> L["/perception/collision/flag"]
+    D --> M["/perception/traffic_light/state"]
     M --> H
     L --> H
     J --> H
-    H --> N[/planning/speed_profile/global]
+    H --> N["/planning/speed_profile/global"]
     J --> O[하위 저수준 제어기]
     N --> O
 ```
