@@ -48,8 +48,8 @@
 ```mermaid
 flowchart LR
     A[LiDAR /velodyne_points] --> B[point_cloud_process]
-    C[카메라 /image_jpeg/compressed] --> D[traffic_light_detection]
-    E[GPS + 사전 경로 파일] --> F[global_path_planner]
+    C[Camera /image_jpeg/compressed] --> D[traffic_light_detection]
+    E[GPS + 주행 경로 파일] --> F[global_path_planner]
     B --> G[path_occupancy_evaluator]
     D --> H[global_speed_profile]
     F --> G
@@ -63,7 +63,7 @@ flowchart LR
     L --> H
     J --> H
     H --> N["/planning/speed_profile/global"]
-    J --> O[하위 저수준 제어기]
+    J --> O[Low-level 제어기]
     N --> O
 ```
 
