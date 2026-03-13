@@ -10,6 +10,13 @@
 
 이 README 문서는 `개요`, `저장소 구조`를 제외하면 제가 담당한 파트만 설명합니다. 제가 맡은 Perception 범위는 `vehicle_localization`을 제외한 패키지입니다.
 
+![4](https://github.com/user-attachments/assets/bbee2efd-f401-4896-8190-6b5dec73ed9d)
+![3](https://github.com/user-attachments/assets/a829a2a2-47ae-4d30-95b1-39c5b9eeba86)
+![2](https://github.com/user-attachments/assets/bcbe6dad-15f7-4e5c-b07f-2d69b2dc5367)
+![1](https://github.com/user-attachments/assets/cdafd96f-c197-4e8c-addb-2931ea6d09c7)
+
+
+
 ## 담당 범위
 
 | 영역 | 패키지 | 구현한 내용 |
